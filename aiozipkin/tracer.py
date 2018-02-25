@@ -1,5 +1,6 @@
 from typing import Optional, Dict  # flake8: noqa
 
+from .context_managers import _ContextManager
 from .helpers import TraceContext, Endpoint
 from .mypy_types import OptLoop, OptBool
 from .record import Record
@@ -80,12 +81,21 @@ class Tracer:
     async def close(self) -> None:
         await self._transport.close()
 
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        await self.close()
+
 
 def create(zipkin_address: str,
            local_endpoint: Endpoint, *,
            sample_rate: float=0.01,
            send_inteval: float=5,
            loop: OptLoop=None) -> Tracer:
-    sampler = Sampler(sample_rate=sample_rate)
-    transport = Transport(zipkin_address, send_inteval=send_inteval, loop=loop)
-    return Tracer(transport, sampler, local_endpoint)
+
+    async def f():
+        sampler = Sampler(sample_rate=sample_rate)
+        transport = Transport(zipkin_address, send_inteval=send_inteval, loop=loop)
+        return Tracer(transport, sampler, local_endpoint)
+    return _ContextManager(f())

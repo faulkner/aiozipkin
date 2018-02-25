@@ -81,3 +81,10 @@ class Transport:
                 await self._timer
             except asyncio.CancelledError:
                 pass
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *args):
+        await self.close()
+
